@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using BookStoreApp.API.Data;
 using AutoMapper;
 using BookStoreApp.API.Models.Book;
+using AutoMapper.QueryableExtensions;
 
 namespace BookStoreApp.API.Controllers
 {
@@ -23,16 +24,21 @@ namespace BookStoreApp.API.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BookReadOnlyDto>>> GetBooks()
         {
-            var books = await context.Books.Include(q => q.Author).ToListAsync();
-            var bookDtos = mapper.Map<IEnumerable<BookReadOnlyDto>>(books);
+            var bookDtos = await context.Books
+                .Include(q => q.Author)
+                .ProjectTo<BookReadOnlyDto>(mapper.ConfigurationProvider)
+                .ToListAsync();
             return Ok(bookDtos);
         }
 
         // GET: api/Books/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Book>> GetBook(int id)
+        public async Task<ActionResult<BookDetailsDto>> GetBook(int id)
         {
-            var book = await context.Books.FindAsync(id);
+            var book = await context.Books
+                .Include(q => q.Author)
+                .ProjectTo<BookDetailsDto>(mapper.ConfigurationProvider)
+                .FirstOrDefaultAsync(q => q.Id == id);
 
             if (book == null)
             {
@@ -45,13 +51,20 @@ namespace BookStoreApp.API.Controllers
         // PUT: api/Books/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutBook(int id, Book book)
+        public async Task<IActionResult> PutBook(int id, BookUpdateDto bookDto)
         {
-            if (id != book.Id)
+            if (id != bookDto.Id)
             {
                 return BadRequest();
             }
 
+            var book = await context.Books.FindAsync(id);
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            mapper.Map(bookDto, book);
             context.Entry(book).State = EntityState.Modified;
 
             try
@@ -76,9 +89,10 @@ namespace BookStoreApp.API.Controllers
         // POST: api/Books
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Book>> PostBook(Book book)
+        public async Task<ActionResult<BookCreateDto>> PostBook(BookCreateDto bookDto)
         {
-            context.Books.Add(book);
+            var book = mapper.Map<Book>(bookDto);
+            await context.Books.AddAsync(book);
             await context.SaveChangesAsync();
 
             return CreatedAtAction("GetBook", new { id = book.Id }, book);

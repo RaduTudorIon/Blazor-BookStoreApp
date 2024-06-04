@@ -12,7 +12,12 @@ public class MapperConfig : Profile
         CreateMap<AuthorCreateDto, Author>().ReverseMap();
         CreateMap<AuthorUpdateDto, Author>().ReverseMap();
         CreateMap<AuthorReadOnlyDto, Author>().ReverseMap();
+
         CreateMap<Book, BookReadOnlyDto>()
-            .ForMember(x => x.AuthorName, opt => opt.MapFrom(src => $"{ src.Author.FirstName } { src.Author.LastName }")
+            .ForMember(destinationMember: x => x.AuthorName, opt => opt.MapFrom(src => $"{src.Author.FirstName} {src.Author.LastName}")).ReverseMap();
+        CreateMap<Book, BookDetailsDto>()
+            .ForMember(destinationMember: x => x.AuthorName, opt => opt.MapFrom(src => $"{src.Author.FirstName} {src.Author.LastName}")).ReverseMap();
+        CreateMap<BookCreateDto, Book>().ReverseMap();
+        CreateMap<BookUpdateDto, Book>().ReverseMap();
     }
 }
